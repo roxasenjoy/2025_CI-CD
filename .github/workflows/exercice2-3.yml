@@ -1,4 +1,4 @@
-name: Exercice 2
+name: Exercice 2 et 3
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  exercice2:
+  exercice2-3:
     runs-on: ubuntu-latest
 
     steps:
