@@ -39,8 +39,8 @@ jobs:
   # Job 2 : Déploiement (CD)
   # ════════════════════════════════════════
   deploy:
-    needs: test  # ← Attend que les tests passent
-    if: github.ref == 'refs/heads/main'  # ← Uniquement sur main
+    needs: test
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -60,3 +60,49 @@ jobs:
       - name: Déployer sur GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      # ════════════════════════════════════════
+      # Health Check - Vérifier que le site répond
+      # ════════════════════════════════════════
+      
+      # On attend 30 secondes que GitHub Pages soit vraiment déployé
+      - name: Attendre que le site soit prêt
+        run: sleep 30
+
+      # On vérifie que le site répond avec un code HTTP 200
+      - name: Vérifier que le restaurant est ouvert
+        run: |
+          echo "🔍 Vérification du site..."
+          
+          # Récupérer l'URL du déploiement
+          SITE_URL="${{ steps.deployment.outputs.page_url }}"
+          echo "📍 URL à vérifier : $SITE_URL"
+          
+          # Vérifier que le site répond avec un code 200
+          # -s : mode silencieux
+          # -o /dev/null : ignore le contenu de la réponse
+          # -w "%{http_code}" : affiche uniquement le code HTTP
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$SITE_URL")
+          echo "📊 Code HTTP : $HTTP_STATUS"
+          
+          # Si le code est 200, le site fonctionne
+          if [ "$HTTP_STATUS" -eq 200 ]; then
+            echo "✅ Le restaurant est ouvert ! Le site répond correctement."
+          else
+            echo "❌ Erreur ! Le site ne répond pas (code: $HTTP_STATUS)"
+            exit 1
+          fi
+
+      # On vérifie que le contenu est correct (optionnel)
+      - name: Vérifier le contenu du site
+        run: |
+          SITE_URL="${{ steps.deployment.outputs.page_url }}"
+          CONTENT=$(curl -s "$SITE_URL")
+          
+          # Vérifier que le titre "Chez Claude" est présent dans la page
+          if echo "$CONTENT" | grep -q "Chez Claude"; then
+            echo "✅ Le contenu est correct - 'Chez Claude' trouvé"
+          else
+            echo "❌ Le contenu ne semble pas correct"
+            exit 1
+          fi
